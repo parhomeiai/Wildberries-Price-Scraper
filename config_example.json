@@ -1,0 +1,13 @@
+{
+  "api": {
+    "baseUrl": "https://test.ru/api",
+    "listEndpoint": "/products/skus",
+    "priceEndpoint": "/import/parcer/prices"
+  },
+
+  "scraper": {
+    "cycleDelay": 10000,
+    "logEnabled": true,
+    "saveLogs": true
+  }
+}
