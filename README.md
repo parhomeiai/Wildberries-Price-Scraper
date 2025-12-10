@@ -1,4 +1,4 @@
-<h2>Парсинг цен с маркетплейса wildberries.ru</h2>
+<h2>Плагин для Chrome - Парсинг цен с маркетплейса wildberries.ru</h2>
 <p>Получает sku от вашего API, ходит по страницам вида https://www.wildberries.ru/catalog/{sku}/detail.aspx и отправляет цены на ваш сервер в формате:</p>
 <code>[
   {
