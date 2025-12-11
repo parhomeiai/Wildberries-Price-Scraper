@@ -21,3 +21,4 @@
 <li>logEnabled - вкл/выкл. логирование;</li>
 <li>saveLogs - вкл/выкл. хранение логов</li>
 </ul>
+<p>В файле manifest.json замените в параметре "host_permissions" домен test.ru на свой.</p>
