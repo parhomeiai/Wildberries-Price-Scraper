@@ -37,23 +37,6 @@ async function log(text) {
     } catch {}
 }
 
-async function getTabHTML(tabId) {
-    // Ждем пока React WB дорисует страницу
-    const ready = await waitForWBRender(tabId);
-
-    if (!ready) {
-        console.log("WB render timeout — контент не загрузился");
-    }
-
-    // Забираем DOM
-    const result = await chrome.scripting.executeScript({
-        target: { tabId },
-        func: () => document.documentElement.outerHTML
-    });
-
-    return result[0].result;
-}
-
 async function waitForWBRender(tabId) {
     for (let i = 0; i < 50; i++) { // максимум 5 секунд
         const result = await chrome.scripting.executeScript({
@@ -111,29 +94,6 @@ async function getWorkerTab() {
     wbTabId = tab.id;
     return tab.id;
 }
-
-// ---------------- PRICE EXTRACTOR ----------------
-
-/*async function extractWBPrices(tabId) {
-    const [{ result }] = await chrome.scripting.executeScript({
-        target: { tabId },
-        func: () => {
-            function get(sel) {
-                const el = document.querySelector(sel);
-                if (!el) return 0;
-                return parseInt(el.textContent.replace(/\D+/g, ""), 10) || 0;
-            }
-
-            return {
-                rcPrice: get(".price__lower-price:not(.wallet-price)"),
-                cardPrice: get(".price__lower-price"),
-                strikePrice: get("del, .price-block__old-price")
-            };
-        }
-    });
-
-    return result;
-}*/
 
 // --------------------------------------------
 //  PARSING PAGE IN REAL TAB
@@ -200,42 +160,6 @@ async function fetchPriceViaWB(url) {
     const prices = await fetchWBPrices(tabId);
 
     await log("Цены: " + JSON.stringify(prices));
-
-    return prices;
-}
-
-async function fetchPriceUsingTab(url) {
-    await waitConfig();
-    await log("Открываем вкладку: " + url);
-
-    // 1. Создаём закрытую вкладку
-    const tab = await chrome.tabs.create({
-        url,
-        active: false
-    });
-
-    // 2. Ждём загрузку страницы
-    await new Promise(resolve => {
-        const listener = (tabId, changeInfo) => {
-            if (tabId === tab.id && changeInfo.status === "complete") {
-                chrome.tabs.onUpdated.removeListener(listener);
-                resolve();
-            }
-        };
-        chrome.tabs.onUpdated.addListener(listener);
-    });
-
-    await log("Страница загружена. Запускаем парсер во вкладке");
-    
-    // Ждём загрузку цены React-ом
-    await waitForWBRender(tab.id);
-    
-    const prices = await fetchWBPrices(tab.id);
-
-    await log("Цена: " + JSON.stringify(prices));
-
-    // 4. Закрываем вкладку
-    chrome.tabs.remove(tab.id);
 
     return prices;
 }
