@@ -95,6 +95,18 @@ async function getWorkerTab() {
     return tab.id;
 }
 
+async function waitTabReady(tabId) {
+    return new Promise(resolve => {
+        const listener = (id, info) => {
+            if (id === tabId && info.status === "complete") {
+                chrome.tabs.onUpdated.removeListener(listener);
+                resolve();
+            }
+        };
+        chrome.tabs.onUpdated.addListener(listener);
+    });
+}
+
 // --------------------------------------------
 //  PARSING PAGE IN REAL TAB
 // --------------------------------------------
@@ -153,6 +165,9 @@ async function fetchPriceViaWB(url) {
     await chrome.tabs.update(tabId, { url });
 
     await log("Загружаем страницу товара: "  + url);
+
+    // ждём статуса complete
+    await waitTabReady(tabId);
 
     // Ждём появления блока с ценой
     await waitForSelector(tabId, "[class*='productSummary']");
