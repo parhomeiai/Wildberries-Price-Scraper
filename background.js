@@ -1,6 +1,7 @@
 let CONFIG = null;
 let isRunning = false;
 let LOGS = [];
+let wbTabId = null;
 
 async function loadConfig() {
     const url = chrome.runtime.getURL("config.json");
@@ -26,6 +27,8 @@ async function log(text) {
     const line = `[${new Date().toISOString()}] ${text}`;
     console.log(line);
     LOGS.push(line);
+    
+    if (LOGS.length > 5000) LOGS.shift();
 
     chrome.storage.local.set({ scraperLogs: LOGS });
 
@@ -75,6 +78,63 @@ async function waitForWBRender(tabId) {
     return false;
 }
 
+async function waitForSelector(tabId, selector, timeout = 5000) {
+    const start = Date.now();
+
+    while (Date.now() - start < timeout) {
+        const [res] = await chrome.scripting.executeScript({
+            target: { tabId },
+            func: sel => !!document.querySelector(sel),
+            args: [selector]
+        });
+
+        if (res.result) return true;
+
+        await new Promise(r => setTimeout(r, 80));
+    }
+
+    return false;
+}
+
+// ---------------- WORKER TAB ----------------
+
+async function getWorkerTab() {
+    if (wbTabId) return wbTabId;
+
+    const workerUrl = chrome.runtime.getURL("worker.html");
+     
+    const tab = await chrome.tabs.create({
+        url: workerUrl,
+        active: false
+    });
+
+    wbTabId = tab.id;
+    return tab.id;
+}
+
+// ---------------- PRICE EXTRACTOR ----------------
+
+/*async function extractWBPrices(tabId) {
+    const [{ result }] = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => {
+            function get(sel) {
+                const el = document.querySelector(sel);
+                if (!el) return 0;
+                return parseInt(el.textContent.replace(/\D+/g, ""), 10) || 0;
+            }
+
+            return {
+                rcPrice: get(".price__lower-price:not(.wallet-price)"),
+                cardPrice: get(".price__lower-price"),
+                strikePrice: get("del, .price-block__old-price")
+            };
+        }
+    });
+
+    return result;
+}*/
+
 // --------------------------------------------
 //  PARSING PAGE IN REAL TAB
 // --------------------------------------------
@@ -118,6 +178,30 @@ async function fetchWBPrices(tabId) {
     });
 
     return result[0].result;
+}
+
+// ---------------- MAIN SCRAPER ----------------
+
+async function fetchPriceViaWB(url) {
+    await waitConfig();
+
+    const tabId = await getWorkerTab();
+
+    // Ускоренная версия WB страницы
+    url = url + "?targetUrl=XS";
+
+    await chrome.tabs.update(tabId, { url });
+
+    await log("Загружаем страницу товара: "  + url);
+
+    // Ждём появления блока с ценой
+    await waitForSelector(tabId, "[class*='productSummary']");
+
+    const prices = await fetchWBPrices(tabId);
+
+    await log("Цены: " + JSON.stringify(prices));
+
+    return prices;
 }
 
 async function fetchPriceUsingTab(url) {
@@ -172,9 +256,9 @@ async function fetchModels() {
         url: `https://www.wildberries.ru/catalog/${v}/detail.aspx`
     }));
     
-      /*return [
+    /*  return [
   {
-    modelId: "173461878",
+    sku: "173461878",
     url: "https://www.wildberries.ru/catalog/173461878/detail.aspx"
   },
 ]*/
@@ -212,7 +296,7 @@ async function runScraper() {
 
         await log("Парсим SKU: " + m.sku);
 
-        const prices = await fetchPriceUsingTab(m.url);
+        const prices = await fetchPriceViaWB(m.url);
 
         if (prices.rcPrice || prices.cardPrice) {            
             await sendPriceToAPI(m.sku, prices);
