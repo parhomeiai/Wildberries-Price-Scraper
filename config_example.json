@@ -8,6 +8,7 @@
   "scraper": {
     "cycleDelay": 10000,
     "logEnabled": true,
-    "saveLogs": true
+    "saveLogs": true,
+    "autostart": true
   }
 }
