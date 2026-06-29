@@ -120,7 +120,8 @@ async function waitForWBRender(tabId) {
                 target: { tabId },
                 func: () => {
                     const priceSelectors = [
-                        "[class*='productPrice']"
+                        "[class*='productPrice']",
+                        "[class*='priceBlock']"
                     ];
                     for (const s of priceSelectors) {
                         const el = document.querySelector(s);
