@@ -1,5 +1,6 @@
 {
   "api": {
+    "testUrl": "https://test.ru",
     "baseUrl": "https://test.ru/api",
     "listEndpoint": "/products/skus",
     "priceEndpoint": "/import/parcer/prices"
