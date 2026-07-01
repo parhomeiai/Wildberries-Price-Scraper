@@ -378,6 +378,13 @@ async function runScraperCycle() {
         await log("Ошибка цикла: " + (err.message || String(err)));
     } finally {
         isProcessing = false;
+        
+        if (wbTabId) {
+            try {
+                await chrome.tabs.remove(wbTabId);
+            } catch {}
+            wbTabId = null;
+        }
     }
 }
 
